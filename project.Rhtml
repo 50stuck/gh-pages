@@ -1,0 +1,84 @@
+<html>
+
+<head>
+<title>Practical Machine Learning Project</title>
+</head>
+
+<body>
+
+<p>This is my submission for the "Practical Machine Learning" course on Courseraú
+walking through building the model I've submitted.</p>
+
+<p>First, I started by getting the data to a workable R format, and setting a seed,
+so the results would be reproducable:
+
+<!--begin.rcode
+pmltraining <- read.csv("pml-training.csv")
+pmltesting <- read.csv("pml-testing.csv")
+
+set.seed(1234) #just to make sure the results I get are reproducable
+end.rcode-->
+
+<p>I then subsetted the data inorder to test the model later on (to estimate the
+out of sample error):</p>
+
+<!--
+inTrain <- createDataPartition(y=pmltraining$classe, p=0.6, list=FALSE) #splitting the data
+training <- pmltraining[inTrain,]
+testing <- pmltraining[-inTrain,]
+-->
+
+<p> And then went on to do some preprocessing of the data befor fitting a model on it:</p>
+
+<!--
+nzv <- nearZeroVar(training)
+training <- training[,-nzv] #gettind rid of covariates with near zero variance
+-->
+
+<p>At this point I wanted to look at the percentage of NAs in each column:</p>
+
+<!--begin.rcode fig.width=7, fig.height=6
+plot(sapply(training, function(x) {sum(as.numeric(is.na(x)))/length(x)}))
+end.rcode-->
+
+<p>This showed that many of the columns have a very high percentage of NAs, which
+would not make for a good dataset to build a model on. And so I've got rid of those
+columns, along with other columns which didn't seem to make any sense as fat as
+building a model was considered:</p>
+
+<!--
+#getting rid of columns which are mostly NAs
+notMostlyNAs <- sapply(training, function(x) {sum(as.numeric(is.na(x)))/length(x)}) < 0.95
+training <- training[,notMostlyNAs]
+
+training <- training[7:59] #getting rid of index, user name, and time stamp columns
+-->
+
+<p>At this point I've decided to calculate principel components that capture most of
+the remainign columns, and then fit a general linear model on top of it:</p>
+
+<!--
+preProc <- preProcess(training[,-53], method="pca") #calculating a list of principal components
+trainPC <- predict(preProc,training[,-53]) #preprocessing the data based on said PCAs
+        
+modelFit<-train(training$classe~.,mathod="glm",data=trainPC) #build a general linear model
+-->
+
+<p>I then preprocessed the testing dataset in the same manner and did a cross-validation
+to estimate the out of sample error of the model:</p>
+
+<!--
+testing <- testing[,-nzv]
+testing <- testing[,notMostlyNAs]
+testing <- testing[7:59]
+testPC <- predict(preProc,testing[,-53])
+
+confusionMatrix(predict(modelFit,testPC),testing$classe) #checking for the model's accuracy
+-->
+
+<p>This showed a very good accuracy level (97.4%), with a 95% CI of between 97.02% and
+97.74% - which seemed like a very good rate, meaning that the model is quite good, 
+with a low out-of-sample error rate expected.</p>
+
+</body>
+</html>
